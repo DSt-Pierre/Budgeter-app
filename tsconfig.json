@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "es2015",
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "sourceMap": true
+    },
+    "files": [
+        "model/m_client.ts",
+        "controller/c_transactions.ts",
+        "model/m_transaction.ts",
+        "model/plaid_api_response.ts",
+        "model/m_category.ts",
+        "views/v_transaction_table.ts"
+    ]
+}

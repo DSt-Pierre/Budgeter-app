@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SmartBudget - The app for the distinguished budgeter!</title>
+<!-- link rel="stylesheet" href="https://threads.plaid.com/threads.css" -->
+
+<link rel="stylesheet" type="text/css" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <main class="main">
+    <div class="grid">
+      <div class="grid__column grid__column--is-twelve-columns">
+        <div id="banner" class="top-banner">
+          <h1 class="top-banner__heading">SmartBudget</h1>
+          <p id="intro" class="top-banner__subheading">
+            An application created to show my proficiency in Javascript
+          </p>
+        </div>
+
+        <div id="container" class="initial-view">
+          <p class="initial-view__description">
+            Click the button below to open a list of Institutions. After you select one, you’ll be guided through an authentication process.
+          </p>
+
+          <button id="link-btn" class="button button--is-primary">Connect using Plaid</button>
+        </div>
+
+        <div id="app" class="connected-view">
+
+          <div class="box">
+            <h3 class="box__heading">Products</h3>
+
+            <!--Transactions -->
+            <div class="item-data-row">
+              <div class="item-data-row__left">
+                <div class="item-data-row__request-type">post</div>
+              </div>
+              <div class="item-data-row__center">
+                <div class="item-data-row__nicename">Transactions</div>
+                <div class="item-data-row__endpoint">/transactions/get</div>
+                <div class="item-data-row__description">Retrieve transactions for credit and depository accounts.</div>
+              </div>
+              <div class="item-data-row__right">
+                <button id="get-transactions-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
+              </div>
+              <div class="item-data-row__response">
+                <table><tbody id="get-transactions-data"></tbody></table>
+              </div>
+            </div>
+            <div id="transaction-table">
+              <table id="transactions">
+
+              </table>
+            </div>
+
+          </div>
+
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script><!--jquery-->
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script><!--script source for Link-->
+  <script>
+  (function($) {
+    console.log("Inside the processing");
+    var products = '<%= p_product %>'.split(',');//Products for which we will have access (we only need transactions)
+    //var c_trans_ref = require('./controller/c_transactions')
+    //var v_trans_table_ref = require('./views/v_transaction_table')
+    //Handler for Link, which will handle username and password 
+    var handler = Plaid.create({
+      apiVersion: 'v2',
+      clientName: 'Plaid Quickstart',
+      env: '<%= p_env %>',
+      product: products,
+      key: '<%= p_public_key %>',
+      onSuccess: function(public_token) {
+        $.post('/get_access_token', {
+          public_token: public_token
+        }, function(data) {
+          $('#container').fadeOut('fast', function() {
+            $('#intro').hide();
+            $('#app, #steps').fadeIn('slow');
+          });
+        });
+      },
+    });
+
+    var accessToken = clean_access_token('access_token');
+
+    if (accessToken != null && accessToken != '') {
+      $.post('/set_access_token', {
+        access_token: accessToken
+      }, function(data) {
+        $('#container').fadeOut('fast', function() {
+          $('#intro').hide();
+          $('#app, #steps').fadeIn('slow');
+        });
+      });
+
+      $.get('/transactions', function(data) {
+        if (data.error != null && data.error.error_code != null) {
+          // Format the error
+          var errorHtml = '<div class="inner"><p>' +
+           '<strong>' + data.error.error_code + ':</strong> ' +
+           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
+
+          if (data.error.error_code === 'PRODUCT_NOT_READY') {
+            // Add additional context for `PRODUCT_NOT_READY` errors
+            errorHtml += '<div class="inner"><p>Note: The PRODUCT_NOT_READY ' +
+             'error is returned when a request to retrieve Transaction data ' +
+             'is made before connection through Plaid is complete</p></div>';
+          }
+          // Render the error
+          $('#get-transactions-data').slideUp(function() {
+            $(this).slideUp(function() {
+              $(this).html(errorHtml).slideDown();
+            });
+          });
+        } else {
+          //var Transactions = new c_trans_ref.c_transactions();
+          //var Transaction_Table = new v_trans_table_ref.v_transaction_table();
+          Transactions.insert_transactions(data.transactions);
+          
+          $('#get-transactions-data').slideUp(function() {
+            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
+            data.transactions.transactions.forEach(function(txn, idx) {
+              html += '<tr>';
+              html += '<td>' + txn.name + '</td>';
+              html += '<td>$' + txn.amount + '</td>';
+              html += '<td>' + txn.date + '</td>';
+              html += '</tr>';
+            });
+
+            $(this).slideUp(function() {
+              $(this).html(html).slideDown();
+            });
+          });
+        }
+      });
+    }
+
+    $('#link-btn').on('click', function(e) {
+      console.log("pressed button");
+      handler.open();
+    });
+
+
+     $('#get-transactions-btn').on('click', function(e) {
+      $.get('/transactions', function(data) {
+        if (data.error != null && data.error.error_code != null) {
+          // Format the error
+          var errorHtml = '<div class="inner"><p>' +
+           '<strong>' + data.error.error_code + ':</strong> ' +
+           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
+
+          if (data.error.error_code === 'PRODUCT_NOT_READY') {
+            // Add additional context for `PRODUCT_NOT_READY` errors
+            errorHtml += '<div class="inner"><p>Note: The PRODUCT_NOT_READY ' +
+             'error is returned when a request to retrieve Transaction data ' +
+             'is made before Plaid finishes the <a href="https://plaid.com/' +
+             'docs/quickstart/#transaction-data-with-webhooks">initial ' +
+             'transaction pull.</a></p></div>';
+          }
+          // Render the error
+          $('#get-transactions-data').slideUp(function() {
+            $(this).slideUp(function() {
+              $(this).html(errorHtml).slideDown();
+            });
+          });
+        } else {
+          $('#get-transactions-data').slideUp(function() {
+            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
+            data.transactions.transactions.forEach(function(txn, idx) {
+              html += '<tr>';
+              html += '<td>' + txn.name + '</td>';
+              html += '<td>$' + txn.amount + '</td>';
+              html += '<td>' + txn.date + '</td>';
+              html += '</tr>';
+            });
+
+            $(this).slideUp(function() {
+              $(this).html(html).slideDown();
+            });
+          });
+        }
+      });
+    });
+
+ 
+  })(jQuery);
+
+function clean_access_token(key) {
+    key = key.replace(/[*+?^$.\[\]{}()|\\\/]/g, "\\$&"); // escape RegEx meta chars
+    var match = location.search.match(new RegExp("[?&]"+key+"=([^&]+)(&|$)"));
+    return match && decodeURIComponent(match[1].replace(/\+/g, " "));
+}
+
+ </script>
+</body>
+</html>
