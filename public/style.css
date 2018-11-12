@@ -32,10 +32,6 @@ body {
 }
 
 
-/*One off tweaks to the layout for tables*/
-
-.response-row {
-}
 
 .response-row--is-identity td {
   width: 25%;

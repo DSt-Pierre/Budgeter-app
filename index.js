@@ -7,6 +7,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var moment = require('moment');
 var plaid = require('plaid');
+var c_trans_ref = require('./controller/c_transactions')
 
 var app_port = 8000;
 var p_client_id = '5bdce0ecca639100112a5014';
@@ -83,8 +84,11 @@ app.get('/transactions', function(request, response, next) {
         error: error
       });
     } else {
-      prettyPrintResponse(transactionsResponse);
-      response.json({error: null, transactions: transactionsResponse});
+      var trans = new c_trans_ref.c_transactions();
+      trans.insert_transactions(transactionsResponse);
+      response.json({error: null, categories: trans.get_JSON()});
+      //prettyPrintResponse(transactionsResponse);
+      //response.json({error: null, transactions: transactionsResponse});
     }
   });
 });

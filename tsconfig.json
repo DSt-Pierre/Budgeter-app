@@ -8,7 +8,6 @@
         "sourceMap": true
     },
     "files": [
-        "model/m_client.ts",
         "controller/c_transactions.ts",
         "model/m_transaction.ts",
         "model/plaid_api_response.ts",
