@@ -21,6 +21,7 @@
 
         <div id="container" class="initial-view">
           <p class="initial-view__description">
+            
             Click the button below to open a list of Institutions. After you select one, you’ll be guided through an authentication process.
           </p>
 
@@ -34,9 +35,12 @@
 
             <!--Transactions -->
             <div class="item-data-row">
-              <button id="get-transactions-btn" class="button button--is-small button--is-default button--is-full-width">Send request</button>
+              <p class="p-intro">Please enter the date range you wish to check (YYYY-MM-DD) and press "Check budget"</p>
+              <div id="filter"><p class="filters">From: <input type="text" id="date-from"/> To:<input type="text" id="date-to"/></p></div>
+              <button id="get-transactions-btn" class="button button--is-small button--is-default button--is-full-width">Check budget</button>
+              <div id="warn"><p>The dates are in an invalid format</p></div>
               <div class="item-data-row__response">
-                <table><tbody id="get-transactions-data"></tbody></table>
+                <table id="table-transaction"><tbody id="get-transactions-data"></tbody></table>
               </div>
             </div>
             <div id="transaction-table">
@@ -57,7 +61,6 @@
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script><!--script source for Link-->
   <script>
   (function($) {
-    console.log("Inside the processing");
     var products = '<%= p_product %>'.split(',');//Products for which we will have access (we only need transactions)
 
     //Handler for Link, which will handle username and password 
@@ -89,57 +92,15 @@
           $('#intro').hide();
           $('#app, #steps').fadeIn('slow');
         });
+        
       });
-
-      /*$.get('/transactions', function(data) {
-        if (data.error != null && data.error.error_code != null) {
-          // Format the error
-          var errorHtml = '<div class="inner"><p>' +
-           '<strong>' + data.error.error_code + ':</strong> ' +
-           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
-
-          if (data.error.error_code === 'PRODUCT_NOT_READY') {
-            // Add additional context for `PRODUCT_NOT_READY` errors
-            errorHtml += '<div class="inner"><p>Note: The PRODUCT_NOT_READY ' +
-             'error is returned when a request to retrieve Transaction data ' +
-             'is made before connection through Plaid is complete</p></div>';
-          }
-          // Render the error
-          $('#get-transactions-data').slideUp(function() {
-            $(this).slideUp(function() {
-              $(this).html(errorHtml).slideDown();
-            });
-          });
-        } else {
-          var Transactions = new c_transactions();
-          //var Transaction_Table = new v_trans_table_ref.v_transaction_table();
-          Transactions.insert_transactions(data.transactions);
-          
-          $('#get-transactions-data').slideUp(function() {
-            var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
-            data.transactions.transactions.forEach(function(txn, idx) {
-              html += '<tr>';
-              html += '<td>' + txn.name + '</td>';
-              html += '<td>$' + txn.amount + '</td>';
-              html += '<td>' + txn.date + '</td>';
-              html += '</tr>';
-            });
-
-            $(this).slideUp(function() {
-              $(this).html(html).slideDown();
-            });
-          });
-        }
-      });*/
     }
 
     $('#link-btn').on('click', function(e) {
-      console.log("pressed button");
       handler.open();
     });
 
-
-     $('#get-transactions-btn').on('click', function(e) {
+    if (accessToken != null && accessToken != '') {
       $.get('/transactions', function(data) {
         if (data.error != null && data.error.error_code != null) {
           // Format the error
@@ -151,8 +112,7 @@
             // Add additional context for `PRODUCT_NOT_READY` errors
             errorHtml += '<div class="inner"><p>Note: The PRODUCT_NOT_READY ' +
              'error is returned when a request to retrieve Transaction data ' +
-             'is made before Plaid finishes the <a href="https://plaid.com/' +
-             'docs/quickstart/#transaction-data-with-webhooks">initial ' +
+             'is made before Plaid finishes the initial ' +
              'transaction pull.</a></p></div>';
           }
           // Render the error
@@ -163,16 +123,41 @@
           });
         } else {
           $('#get-transactions-data').slideUp(function() {
-            /*var html = '<tr><td><strong>Name</strong></td><td><strong>Amount</strong></td><td><strong>Date</strong></td></tr>';
-            data.transactions.transactions.forEach(function(txn, idx) {
-              html += '<tr>';
-              html += '<td>' + txn.name + '</td>';
-              html += '<td>$' + txn.amount + '</td>';
-              html += '<td>' + txn.date + '</td>';
-              html += '</tr>';
-            });*/
             var html = generate_transactions_table(data.categories);
-            console.log(html);
+            $(this).slideUp(function() {
+              $(this).html(html).slideDown();
+            });
+          });
+        }
+      });
+    }
+
+     $('#get-transactions-btn').on('click', function(e) {
+      if (validate_dates($("#date-from").val(),$("#date-to").val())){
+        $('#warn').fadeOut('fast');
+      $.get('/transactions?from='+$("#date-from").val()+'&to='+$("#date-to").val(), function(data) {
+        if (data.error != null && data.error.error_code != null) {
+          // Format the error
+          var errorHtml = '<div class="inner"><p>' +
+           '<strong>' + data.error.error_code + ':</strong> ' +
+           (data.error.display_message == null ? data.error.error_message : data.error.display_message)  + '</p></div>';
+
+          if (data.error.error_code === 'PRODUCT_NOT_READY') {
+            // Add additional context for `PRODUCT_NOT_READY` errors
+            errorHtml += '<div class="inner"><p>Note: The PRODUCT_NOT_READY ' +
+             'error is returned when a request to retrieve Transaction data ' +
+             'is made before Plaid finishes the initial ' +
+             'transaction pull.</a></p></div>';
+          }
+          // Render the error
+          $('#get-transactions-data').slideUp(function() {
+            $(this).slideUp(function() {
+              $(this).html(errorHtml).slideDown();
+            });
+          });
+        } else {
+          $('#get-transactions-data').slideUp(function() {
+            var html = generate_transactions_table(data.categories);
             $(this).slideUp(function() {
 
               $(this).html(html).slideDown();
@@ -180,9 +165,11 @@
           });
         }
       });
+    }else{
+      $('#warn').fadeIn('slow');
+    }
     });
 
- 
   })(jQuery);
 
 function clean_access_token(key) {
@@ -194,11 +181,40 @@ function clean_access_token(key) {
 function generate_transactions_table(Categories){
   let built_html = "";
   Categories.forEach(category => {
-      built_html += "<tr id=\"row-" + category.label + "\"><td>" + category.label + "</td><td>" + category.amount.toString() + "</td><td></td></tr>";
+      //built_html += "<tr class=\"row-budget\" id=\"row-" + category.label + "\"><td class=\"cell-label\">" + category.label + "</td><td>" + category.amount.toString() + "</td><td><img src=\"./../img/arrow-down.png\" id=\"img-"+category.label+"\"/></td></tr>";
+      built_html += "<tr class=\"row-category-budget\" id=\"row-" + category.label + "\"><td class=\"cell-label\">" + category.label + "</td><td class=\"cell-amount\">$" + category.amount.toFixed(2) + "</td></tr>";
   });
+  
+
   return built_html;
 
 }
+function validate_dates(to, from){
+    if(!/^\d{4}\-\d{1,2}\-\d{1,2}$/.test(to)){
+      return false;
+    }
+        
+    if(!/^\d{4}\-\d{1,2}\-\d{1,2}$/.test(from)){
+      return false;
+    }
+    return true;
+}
+function parse_date(date){
+  // Parse the date parts to integers
+  var date_parts = date.split("-");
+  var day = parseInt(parts[2], 10);
+  if(day.length < 2 ){
+    day = "0"+day;
+  }
+  var month = parseInt(parts[1], 10);
+  if(month.length < 2 ){
+    month = "0"+month;
+  }
+  var year = parseInt(parts[0], 10);
+  return year+month+day;
+}
+ 
+
 
  </script>
 </body>

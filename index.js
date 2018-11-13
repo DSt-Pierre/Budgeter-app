@@ -71,9 +71,25 @@ app.post('/get_access_token', function(request, response, next) {
 
 // Retrieve Transactions for an Item
 app.get('/transactions', function(request, response, next) {
+  console.log("inside function");
+  var date_to = request.query.to;
+  var date_from = request.query.from;
+  var startDate;
+  var endDate;
   // Pull transactions for the Item for the last 30 days
-  var startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
-  var endDate = moment().format('YYYY-MM-DD');
+  if(date_from == null){
+    console.log("date_from is empty");
+    startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
+  }else{
+    console.log("date_from is eq. to" + date_from.toString());
+    startDate = moment(date_from).format("YYYY-MM-DD");
+  }
+  if(date_to == null){
+    endDate = moment().format('YYYY-MM-DD');
+  }else{
+    endDate = moment(date_to).format("YYYY-MM-DD");
+  }
+  console.log(startDate.toString() + endDate.toString());
   client.getTransactions(p_access_token, startDate, endDate, {
     count: 250,
     offset: 0,
