@@ -11,7 +11,6 @@
         "controller/c_transactions.ts",
         "model/m_transaction.ts",
         "model/plaid_api_response.ts",
-        "model/m_category.ts",
-        "views/v_transaction_table.ts"
+        "model/m_category.ts"
     ]
 }
